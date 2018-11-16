@@ -115,7 +115,7 @@ def main(config_file, run_script):
         exp_launch = os.path.join(c['logdir'], f'.run/exp{i}.sh')
         with open(exp_launch, 'w') as f:
             f.write("#!/bin/bash\n")
-            f.write(f"bash {script_file} param_file\n")
+            f.write(f"{os.path.abspath(script_file)} param_file\n")
         call(['chmod', '+x', exp_launch])
 
 
@@ -124,7 +124,7 @@ def main(config_file, run_script):
             cmd += f' --{flag} {value}' if len(flag) > 1 else f' -{flag} {value}'
         for j in range(c['njobs']):
             outfile = os.path.join(c['logdir'], f'.slurm/exp{i}_{j}.out')
-            call([cmd, f' -o {outfile}', exp_launch])
+            call(cmd.split() + ['-o', outfile, exp_launch])
 
 
 

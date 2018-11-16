@@ -10,7 +10,7 @@ setup(name='slurm',
       packages=[package for package in find_packages()
                 if package.startswith('slurm')],
       install_requires=[
-          'yaml',
+          'pyyaml',
           'numpy'
       ],
       description='Code for launching jobs on slurm',

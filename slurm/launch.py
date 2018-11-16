@@ -1,7 +1,8 @@
-import os, sys, argparse, time, yaml
+import os, argparse, yaml
 from subprocess import call
 from shutil import copyfile
 import numpy as np
+from zlib import adler32 as hash_fn
 
 
 class Jobs:
@@ -118,7 +119,7 @@ def main(config_file, run_script):
             f.write(f"{script_file} {param_file}\n")
         call(['chmod', '+x', exp_launch])
 
-        id = abs(hash(logdir))
+        id = abs(hash_fn(str.encode(logdir)))
         cmd = f'sbatch -d singleton -J exp{i}_{id}'
         for flag, value in c['slurm'].items():
             cmd += f' --{flag} {value}' if len(flag) > 1 else f' -{flag} {value}'

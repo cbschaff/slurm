@@ -1,7 +1,6 @@
-import os, sys, argparse, glob, yaml
+import os, argparse, glob, yaml
 from subprocess import call
-from shutil import copyfile
-import numpy as np
+from zlib import adler32 as hash_fn
 
 
 def main(logdir, njobs, exps):
@@ -16,7 +15,7 @@ def main(logdir, njobs, exps):
         c = yaml.load(f)
 
 
-    id = abs(hash(logdir))
+    id = abs(hash_fn(str.encode(logdir)))
     for lf in launch_files:
         e = os.path.basename(lf)[:-3]
         cmd = f'sbatch -d singleton -J {e}_{id}'

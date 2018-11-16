@@ -91,7 +91,6 @@ class Jobs:
 def main(config_file, run_script):
     with open(config_file, 'r') as f:
         c = yaml.load(f)
-    print(c)
 
     script_file = os.path.join(c['logdir'], '.run_script')
 
@@ -105,7 +104,6 @@ def main(config_file, run_script):
 
     for i,ps in enumerate(Jobs(c)):
 
-        print(i, ps)
         expdir =  os.path.join(c['logdir'], f'exp{i}')
         param_file = os.path.join(c['logdir'], f'.configs/exp{i}.yaml')
 
@@ -118,12 +116,12 @@ def main(config_file, run_script):
             f.write(f"{os.path.abspath(script_file)} param_file\n")
         call(['chmod', '+x', exp_launch])
 
-
-        cmd = f'sbatch -d singleton -J exp{i}_{time.time()}'
+        id = abs(hash(os.path.abspath(c['logdir'])))
+        cmd = f'sbatch -d singleton -J exp{i}_{id}'
         for flag, value in c['slurm'].items():
             cmd += f' --{flag} {value}' if len(flag) > 1 else f' -{flag} {value}'
-        for j in range(c['njobs']):
-            outfile = os.path.join(c['logdir'], f'.slurm/exp{i}_{j}.out')
+        for _ in range(c['njobs']):
+            outfile = os.path.join(c['logdir'], f'.slurm/exp{i}_%j.out')
             call(cmd.split() + ['-o', outfile, exp_launch])
 
 

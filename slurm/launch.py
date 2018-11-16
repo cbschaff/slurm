@@ -25,7 +25,7 @@ class Jobs:
 
             if scale == 'log':
                 v = np.exp(v)
-            return v
+            return float(v)
 
         elif 'values' in p:
             return p['values'][np.random.randint(len(p['values']))]

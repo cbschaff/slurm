@@ -33,7 +33,7 @@ def main(logdir, njobs, exps):
 if __name__=='__main__':
     parser = argparse.ArgumentParser(description='add more slurm jobs to an experiment.')
     parser.add_argument('logdir', type=str, help='log directory.')
-    parser.add_argument('-n', '--njobs', type=int, help='The number of jobs to add.')
+    parser.add_argument('-n', '--njobs', type=int, default=1, help='The number of jobs to add.')
     parser.add_argument('-e', '--exps', nargs='*', default='', type=str, help='Experiments to extend. leave blank to extend all jobs.')
     args = parser.parse_args()
     main(args.logdir, args.njobs, args.exps)

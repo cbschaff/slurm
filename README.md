@@ -79,6 +79,14 @@ python -m slurm.add_jobs path/to/logdir -n num_jobs -e exp0 exp1
 
 This command launches additional slurm jobs using sbatch for the specified experiments in a log directory. If the "-e" flag is unused, all experiments will be extended.
 
+### copy_exp command
+
+```bash
+python -m slurm.copy_exp path/to/logdir expname newexpname -l newlogdir
+```
+
+This command clones an experiment directory under a new name and creates the necessary files so that the new experiment can be run with the add_jobs command. The "-l" flag optionally allows the user to copy the experiment to a new log directory.
+
 
 ## Installation
 

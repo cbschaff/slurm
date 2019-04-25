@@ -94,6 +94,7 @@ def main(config_file, run_script):
         c = yaml.load(f)
 
     logdir = os.path.abspath(c['logdir'])
+    prefix = c['prefix'] if 'prefix' in c else 'exp'
 
     script_file = os.path.join(logdir, '.run_script')
 
@@ -107,24 +108,24 @@ def main(config_file, run_script):
 
     for i,ps in enumerate(Jobs(c)):
 
-        expdir =  os.path.join(logdir, f'exp{i}')
-        param_file = os.path.join(logdir, f'.configs/exp{i}.yaml')
+        expdir =  os.path.join(logdir, f'{prefix}{i}')
+        param_file = os.path.join(logdir, f'.configs/{prefix}{i}.yaml')
 
         with open(param_file, 'w') as f:
             yaml.dump({'expdir': expdir, 'params': ps}, f, default_flow_style=False)
 
-        exp_launch = os.path.join(logdir, f'.run/exp{i}.sh')
+        exp_launch = os.path.join(logdir, f'.run/{prefix}{i}.sh')
         with open(exp_launch, 'w') as f:
             f.write("#!/bin/bash\n")
             f.write(f"{script_file} {param_file}\n")
         call(['chmod', '+x', exp_launch])
 
         id = abs(hash_fn(str.encode(logdir)))
-        cmd = f'sbatch -d singleton -J exp{i}_{id}'
+        cmd = f'sbatch -d singleton -J {prefix}{i}_{id}'
         for flag, value in c['slurm'].items():
             cmd += f' --{flag} {value}' if len(flag) > 1 else f' -{flag} {value}'
         for _ in range(c['njobs']):
-            outfile = os.path.join(logdir, f'.slurm/exp{i}_%j.out')
+            outfile = os.path.join(logdir, f'.slurm/{prefix}{i}_%j.out')
             call(cmd.split() + ['-o', outfile, exp_launch])
 
 

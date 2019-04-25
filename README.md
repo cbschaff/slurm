@@ -11,6 +11,7 @@ This is a yaml file containing hyper-parameters, sbatch flags, and a other optio
 
 ```yaml
 logdir: path/to/logdir # required
+prefix: exp_name_prefix # optional. default: exp
 njobs: 2 # number of slurm jobs to launch for each experiment. required
 algorithm: random # or grid. required
 nexps: 10 # number of experiments to laucnh when using random search.
@@ -50,7 +51,7 @@ The run script should run the user's code with the specified parameters. It has 
 The "params.yaml" file has the following format:
 
 ```yaml
-expdir: path/to/logdir/exp0
+expdir: path/to/logdir/exp_name_prefix0
 params:
   p1: 5
   p2: 5
@@ -61,7 +62,7 @@ params:
 
 ## Pakage Interface
 
-Once installed, the pakage has two functions: "launch" and "add_jobs".
+Once installed, the pakage has three functions: "launch", "add_jobs", and "copy_exp".
 
 ### launch command
 

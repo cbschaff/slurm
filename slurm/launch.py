@@ -92,6 +92,8 @@ class Jobs:
 def main(config_file, run_script):
     with open(config_file, 'r') as f:
         c = yaml.load(f)
+    if 'slurm' not in c:
+        assert False, "Your config file doesn't specify slurm parameters."
 
     logdir = os.path.abspath(c['logdir'])
     prefix = c['prefix'] if 'prefix' in c else 'exp'
@@ -106,6 +108,10 @@ def main(config_file, run_script):
     copyfile(run_script, script_file)
     call(['chmod', '+x', script_file])
 
+    if 'p' in c['slurm'] and 'long' in c['slurm']['p']:
+        timeout = '3.95d'
+    else:
+        timeout = '3.8h'
     for i,ps in enumerate(Jobs(c)):
 
         expdir =  os.path.join(logdir, f'{prefix}{i}')
@@ -117,7 +123,7 @@ def main(config_file, run_script):
         exp_launch = os.path.join(logdir, f'.run/{prefix}{i}.sh')
         with open(exp_launch, 'w') as f:
             f.write("#!/bin/bash\n")
-            f.write(f"{script_file} {param_file}\n")
+            f.write(f"timeout -s SIGINT --foreground {timeout} {script_file} {param_file}\n")
         call(['chmod', '+x', exp_launch])
 
         id = abs(hash_fn(str.encode(logdir)))

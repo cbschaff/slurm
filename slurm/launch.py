@@ -123,7 +123,20 @@ def main(config_file, run_script):
         exp_launch = os.path.join(logdir, f'.run/{prefix}{i}.sh')
         with open(exp_launch, 'w') as f:
             f.write("#!/bin/bash\n")
-            f.write(f"timeout -s SIGINT --foreground {timeout} {script_file} {param_file}\n")
+            # f.write(f"timeout -s SIGINT --foreground {timeout} {script_file} {param_file}\n")
+            cmd = f"timeout -s SIGINT --foreground {timeout} {script_file} --expdir {expdir}"
+            if 'config_base' in ps:
+                cmd += f' --gin_config {ps["config_base"]}'
+            cmd += ' --gin_bindings'
+            for k,v in ps.items():
+                if k == 'config_base':
+                    continue
+                elif isinstance(v, str) and v[0] != '@':
+                    cmd += f' \'{k}="{v}"\''
+                else:
+                    cmd += f" '{k}={v}'"
+            f.write(cmd)
+
         call(['chmod', '+x', exp_launch])
 
         id = abs(hash_fn(str.encode(logdir)))

@@ -17,6 +17,7 @@ class Jobs:
 
         if 'range' in p:
             minv, maxv = p['range']
+            minv, maxv = float(minv), float(maxv)
             if scale == 'log':
                 minv = np.log(minv)
                 maxv = np.log(maxv)
@@ -93,7 +94,7 @@ def main(config_file, run_script):
     with open(config_file, 'r') as f:
         c = yaml.load(f)
     if 'slurm' not in c:
-        assert False, "Your config file doesn't specify slurm parameters."
+        raise ValueError("Your config file doesn't specify slurm parameters.")
 
     logdir = os.path.abspath(c['logdir'])
     prefix = c['prefix'] if 'prefix' in c else 'exp'
@@ -123,19 +124,7 @@ def main(config_file, run_script):
         exp_launch = os.path.join(logdir, f'.run/{prefix}{i}.sh')
         with open(exp_launch, 'w') as f:
             f.write("#!/bin/bash\n")
-            # f.write(f"timeout -s SIGINT --foreground {timeout} {script_file} {param_file}\n")
-            cmd = f"timeout -s SIGINT --foreground {timeout} {script_file} --expdir {expdir}"
-            if 'config_base' in ps:
-                cmd += f' --gin_config {ps["config_base"]}'
-            cmd += ' --gin_bindings'
-            for k,v in ps.items():
-                if k == 'config_base':
-                    continue
-                elif isinstance(v, str) and v[0] != '@':
-                    cmd += f' \'{k}="{v}"\''
-                else:
-                    cmd += f" '{k}={v}'"
-            f.write(cmd)
+            f.write(f"timeout -s SIGINT {timeout} {script_file} {param_file}\n")
 
         call(['chmod', '+x', exp_launch])
 
@@ -146,10 +135,6 @@ def main(config_file, run_script):
         for _ in range(c['njobs']):
             outfile = os.path.join(logdir, f'.slurm/{prefix}{i}_%j.out')
             call(cmd.split() + ['-o', outfile, exp_launch])
-
-
-
-
 
 
 if __name__=='__main__':

@@ -15,7 +15,6 @@ prefix: exp_name_prefix # optional. default: exp
 njobs: 2 # number of slurm jobs to launch for each experiment. required
 algorithm: random # or grid. required
 nexps: 10 # number of experiments to laucnh when using random search.
-base_config: path/to/base_config.gin # optional.
 
 # Hyperparameters. Parameter values can be specified with the "values" and "range" keywords.
 # When using grid search, all parameters must have the "values" keyword or be constant.
@@ -46,7 +45,7 @@ slurm:
 The run script should run the user's code with the specified parameters. It has the following interface:
 
 ```bash
-./run_script --expdir path/to/logdir/expname_prefix0 --gin_config path/to/base_config.gin --gin_bindings 'p1=5' 'p2=1' ...
+./run_script params.yaml
 ```
 
 The "params.yaml" file has the following format:

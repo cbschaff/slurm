@@ -3,91 +3,114 @@ from subprocess import call
 from shutil import copyfile
 import numpy as np
 from zlib import adler32 as hash_fn
+from slurm import nest
+
+
+class Parameter:
+    def __init__(self, data):
+        if isinstance(data, dict):
+            self.scale = data['scale'] if 'scale' in data else 'linear'
+
+            self.range = None
+            if 'range' in data:
+                minv, maxv = data['range']
+                self.range = float(minv), float(maxv)
+                if self.scale == 'log':
+                    self.range = (np.log(v) for v in self.range)
+
+            self.values = data['values'] if 'values' in data else None
+
+            self.group = data['group'] if 'group' in data else None
+
+        else:
+            self.scale = 'linear'
+            self.range = None
+            self.values = [data]
+
+    def sample(self):
+        if self.range is not None:
+            v = np.random.rand() * (self.range[1] - self.range[0]) + self.range[0]
+
+            if self.scale == 'log':
+                v = np.exp(v)
+            return float(v)
+
+        elif self.values is not None:
+            return self.values[np.random.randint(len(self.values))]
+
+        else:
+            raise ValueError('Either range or values must be defined for random search.')
+
+
+def is_parameter(data):
+    if not isinstance(data, dict):
+        return True
+
+    for k in data:
+        if k not in ['scale', 'range', 'values', 'group']:
+            return False
+    return True
+
+
+nest.add_item_check(is_parameter)
 
 
 class Jobs:
     def __init__(self, config):
         self.config = config
+        self.structure = nest.get_structure(config['params'])
+        self.params = [Parameter(p) for p in nest.flatten(config['params'])]
 
-    def sample(self, param):
-        p = self.config['params'][param]
-        if not isinstance(p, dict):
-            return p
-        scale = p['scale'] if 'scale' in p else 'linear'
-
-        if 'range' in p:
-            minv, maxv = p['range']
-            minv, maxv = float(minv), float(maxv)
-            if scale == 'log':
-                minv = np.log(minv)
-                maxv = np.log(maxv)
-
-            v = np.random.rand() * (maxv - minv) + minv
-
-            if scale == 'log':
-                v = np.exp(v)
-            return float(v)
-
-        elif 'values' in p:
-            return p['values'][np.random.randint(len(p['values']))]
-
-
-        else:
-            assert False, "Possible parameter values must be defined with range or values keys."
-
-    def get_value(self, param, index):
-        p = self.config['params'][param]
-        if not isinstance(p, dict):
-            return p if index==0 else None
-
-        assert 'values' in p, "All non-constant parameters must have the values attribute to use Grid Search."
-
-        return p['values'][index] if index < len(p['values']) else None
-
+        self.independent_params = 0
+        self.group_names = []
+        for p in self.params:
+            if p.group is None or p.group not in self.groups:
+                self.independent_params += 1
+                if p.group is not None:
+                    self.group_names.append(p.group)
 
     def __iter__(self):
-        self.n = 0
-        self.counts = np.zeros(len(self.config['params']), dtype=np.int32)
-        return self
-
-    def __next__(self):
         if self.config['algorithm'] == 'random':
-            return self._next_random()
+            return self._random_search_iter()
         if self.config['algorithm'] == 'grid':
-            return self._next_grid()
+            return self._grid_search_iter()
 
         assert False, "Unkown algorithm"
 
+    def _random_search_iter(self):
+        for _ in range(self.config['nexps']):
+            yield nest.pack_sequence_as([p.sample() for p in self.params],
+                                        self.structure)
 
-    def _next_random(self):
-        if self.n >= self.config['nexps']:
-            raise StopIteration
+    def _grid_search_iter(self):
+        for flat_params in self._grid_search_recur(self.params):
+            yield nest.pack_sequence_as(flat_params, self.structure)
 
-        self.n += 1
-        params = {}
-        for param in self.config['params']:
-            params[param] = self.sample(param)
-        return params
+    def _grid_search_recur(self, params, group_inds={}):
+        p = params[0]
+        if p.values is None:
+            raise ValueError('The values attribute must be defined for all '
+                             'parameters to use grid search!')
 
-    def _next_grid(self):
-        param_names = sorted(self.config['params'].keys())
-        params = {}
+        if p.group is None:
+            for v in p.values:
+                for vals in self._grid_search_recur(params[1:], group_inds):
+                    yield [v] + vals
 
-        for i,p in reversed(list(enumerate(param_names))):
-            v = self.get_value(p, self.counts[i])
-            if v is None:
-                if i == 0:
-                    raise StopIteration
-                else:
-                    self.counts[i] = 0
-                    self.counts[i-1] += 1
-                    v = self.get_value(p, self.counts[i])
+        elif p.group in group_inds:
+            ind = group_inds[p.group]
+            if ind >= len(p.values):
+                raise ValueError('All parameters in the same group must have '
+                                 'the same number of values!')
+            for vals in self._grid_search_recur(params[1:], group_inds):
+                yield [p.values[ind]] + vals
 
-            params[p] = v
-
-        self.counts[-1] += 1
-        return params
-
+        else:
+            group_inds[p.group] = 0
+            for v in p.values:
+                for vals in self._grid_search_recur(params[1:], group_inds):
+                    yield [v] + vals
+                group_inds[p.group] += 1
 
 
 def main(config_file, run_script):
@@ -113,13 +136,15 @@ def main(config_file, run_script):
         timeout = '3.95d'
     else:
         timeout = '3.8h'
-    for i,ps in enumerate(Jobs(c)):
+    for i, ps in enumerate(Jobs(c)):
 
-        expdir =  os.path.join(logdir, f'{prefix}{i}')
+        expdir = os.path.join(logdir, f'{prefix}{i}')
         param_file = os.path.join(logdir, f'.configs/{prefix}{i}.yaml')
 
+        ps['logdir'] = expdir
+
         with open(param_file, 'w') as f:
-            yaml.dump({'expdir': expdir, 'params': ps}, f, default_flow_style=False)
+            yaml.dump(ps, f, default_flow_style=False)
 
         exp_launch = os.path.join(logdir, f'.run/{prefix}{i}.sh')
         with open(exp_launch, 'w') as f:

@@ -14,7 +14,6 @@ def main(logdir, njobs, exps):
     with open(os.path.join(logdir, '.config'), 'r') as f:
         c = yaml.load(f)
 
-
     id = abs(hash_fn(str.encode(logdir)))
     for lf in launch_files:
         e = os.path.basename(lf)[:-3]

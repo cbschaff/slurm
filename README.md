@@ -61,7 +61,7 @@ The run script should run the user's code with the specified parameters. It has 
 ./run_script params.yaml
 ```
 
-The "params.yaml" file has the following format:
+Using the above config file, the "params.yaml" file might look like this:
 
 ```yaml
 logdir: path/to/logdir/exp_name_prefix0

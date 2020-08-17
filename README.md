@@ -20,17 +20,30 @@ nexps: 10 # number of experiments to laucnh when using random search.
 # When using grid search, all parameters must have the "values" keyword or be constant.
 # When using random search, parameters will be sampled uniformly from "range" if specified else "values".
 # When using the "range" keyword, you can specify a scale to sample in (linear or log). 
+# Parameters can be assigned to groups for grid search. The values of the grouped parameters
+# will be iterated over as if they were a single parameter.
 params: 
     p1: 5 # consntant
     p2:
         values: [1,2,3,4,5]
-    p3:
-        range: [1, 10]
-        scale: linear
-    p4:
-        range: [1, 100] # will sample from "range" when using random search, and iterate over "values" when using grid search.
-        values: [1, 100]
-        scale: log
+    namespace1:
+        p3:
+            range: [1, 10]
+            scale: linear
+        p4:
+            range: [1, 100] # will sample from "range" when using random search,
+                            # and iterate over "values" when using grid search.
+            values: [1, 100]
+            scale: log
+    
+    p5:
+        values: [1,3,5]
+        group: 0
+    
+    p6:
+        values: [0,2,4]
+        group: 0  # p6 will have value 0 when p5 has value 1,
+                  # 2 when p5 has value 3, and so on.
 
 # Define sbatch flags here.
 # The "d", "J", and "o" flags are used by this package and shouldn't be defined here.
@@ -51,12 +64,15 @@ The run script should run the user's code with the specified parameters. It has 
 The "params.yaml" file has the following format:
 
 ```yaml
-expdir: path/to/logdir/exp_name_prefix0
-params:
-  p1: 5
-  p2: 5
+logdir: path/to/logdir/exp_name_prefix0
+
+p1: 5
+p2: 5
+namespace1:
   p3: 5.655377361451643
   p4: 14.188903177147603
+p5: 1
+p6: 0
 ```
 
 

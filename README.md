@@ -42,7 +42,7 @@ params:
     
     p6:
         values: [0,2,4]
-        group: 0  # p6 will have value 0 when p5 has value 1,
+        group: 0  # For grid search, p6 will have value 0 when p5 has value 1,
                   # 2 when p5 has value 3, and so on.
 
 # Define sbatch flags here.

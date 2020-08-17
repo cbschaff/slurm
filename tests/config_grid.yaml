@@ -1,0 +1,32 @@
+logdir: '/home-nfs/cbschaff/code/slurm/tests/test_grid'
+prefix: 'test'
+njobs: 1
+nexps: 10
+algorithm: grid
+
+params:
+    namespace1:
+        p1: 0
+        p2:
+            range: [0, 1]
+            values: [0, 0.1, 0.2, 0.3, 1.0]
+            group: 0
+        p3:
+            range: [0.01, 100]
+            scale: log
+            values: [0, 0.1, 0.2, 0.3, 1.0]
+            group: 0
+
+        p4:
+            values: [0, 0.1, 0.2, 0.3, 1.0]
+
+    p1: 1
+    p2:
+        values: [0, 10, 100]
+        group: 1
+    p3:
+        values: [0, 10, 100]
+        group: 1
+
+slurm:
+    p: ripl-gpu

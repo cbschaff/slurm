@@ -16,7 +16,7 @@ class Parameter:
                 minv, maxv = data['range']
                 self.range = float(minv), float(maxv)
                 if self.scale == 'log':
-                    self.range = (np.log(v) for v in self.range)
+                    self.range = tuple([np.log(v) for v in self.range])
 
             self.values = data['values'] if 'values' in data else None
 
@@ -26,6 +26,7 @@ class Parameter:
             self.scale = 'linear'
             self.range = None
             self.values = [data]
+            self.group = None
 
     def sample(self):
         if self.range is not None:
@@ -43,6 +44,9 @@ class Parameter:
 
 
 def is_parameter(data):
+    if isinstance(data, (list, tuple)):
+        return False
+
     if not isinstance(data, dict):
         return True
 
@@ -61,14 +65,6 @@ class Jobs:
         self.structure = nest.get_structure(config['params'])
         self.params = [Parameter(p) for p in nest.flatten(config['params'])]
 
-        self.independent_params = 0
-        self.group_names = []
-        for p in self.params:
-            if p.group is None or p.group not in self.groups:
-                self.independent_params += 1
-                if p.group is not None:
-                    self.group_names.append(p.group)
-
     def __iter__(self):
         if self.config['algorithm'] == 'random':
             return self._random_search_iter()
@@ -79,6 +75,7 @@ class Jobs:
 
     def _random_search_iter(self):
         for _ in range(self.config['nexps']):
+            flat_params = [p.sample() for p in self.params]
             yield nest.pack_sequence_as([p.sample() for p in self.params],
                                         self.structure)
 
@@ -87,6 +84,10 @@ class Jobs:
             yield nest.pack_sequence_as(flat_params, self.structure)
 
     def _grid_search_recur(self, params, group_inds={}):
+        if len(params) == 0:
+            yield []
+            return
+
         p = params[0]
         if p.values is None:
             raise ValueError('The values attribute must be defined for all '
@@ -106,6 +107,7 @@ class Jobs:
                 yield [p.values[ind]] + vals
 
         else:
+            group_inds = dict(group_inds)
             group_inds[p.group] = 0
             for v in p.values:
                 for vals in self._grid_search_recur(params[1:], group_inds):
